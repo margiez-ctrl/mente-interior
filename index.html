@@ -383,7 +383,7 @@ async function callAI(system, messages) {
 
 function profileStr() {
   if (!patterns.length) return 'Sin patrones detectados aún.';
-  return 'Patrones: ' + patterns.map(p => `${p.name}: ${p.desc} (${p.framework}, x${p.count})`).join('; ') + `. Sesiones: ${userProfile?.session_count || 0}.`;
+  return 'Patrones: ' + patterns.map(p => `${p.name}: ${p.description} (${p.framework}, x${p.count})`).join('; ') + `. Sesiones: ${userProfile?.session_count || 0}.`;
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
@@ -490,7 +490,7 @@ async function procInput(text) {
     const pm = raw.match(/\[(PATRON|PATTERN):\s*([^|]+)\|([^|]+)\|([^\]]+)\]/);
     if (pm) { main = raw.replace(pm[0], '').trim(); await upsertPattern(pm[2].trim(), pm[3].trim(), pm[4].trim()); }
     const tm = raw.match(/\[(HERRAMIENTA|TOOL|כלי):\s*([^|]+)\|([^\]]+)\]/);
-    if (tm) { main = main.replace(tm[0], '').trim(); toolD = { name: tm[2].trim(), desc: tm[3].trim() }; }
+    if (tm) { main = main.replace(tm[0], '').trim(); toolD = { name: tm[2].trim(), description: tm[3].trim() }; }
 
     hist.push({ role: 'assistant', content: raw });
     await saveMessage('assistant', raw);
@@ -510,7 +510,7 @@ async function upsertPattern(name, desc, framework) {
   const existing = patterns.find(p => p.name.toLowerCase() === name.toLowerCase());
   if (existing) {
     await sb.from('patterns').update({ count: existing.count + 1, desc, last_seen: new Date().toISOString() }).eq('id', existing.id);
-    existing.count++; existing.desc = desc;
+    existing.count++; existing.description = desc;
   } else {
     const { data: newP } = await sb.from('patterns').insert({ user_id: currentUser.id, name, desc, framework, count: 1 }).select().single();
     if (newP) patterns.push(newP);
@@ -524,7 +524,7 @@ function renderPatterns() {
   c.innerHTML = patterns.map(p => `
     <div class="pat-item">
       <div class="pat-name">${p.name}</div>
-      <div class="pat-desc">${p.desc}</div>
+      <div class="pat-desc">${p.description}</div>
       <span class="pat-fw">${p.framework}</span>
       <div class="pat-count">Detectado ${p.count} veces</div>
     </div>`).join('');
@@ -535,7 +535,7 @@ async function generateInsight() {
   const c = document.getElementById('insight-content');
   c.innerHTML = '<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
   try {
-    const pats = patterns.map(p => `${p.name}: ${p.desc}`).join('; ');
+    const pats = patterns.map(p => `${p.name}: ${p.description}`).join('; ');
     const prompt = `Patrones de esta persona: ${pats}. Dame UN insight neurológico profundo (2-3 oraciones) que conecte estos patrones entre sí. Cita un autor o framework. Sin clichés. En ${lang === 'es' ? 'español' : lang === 'en' ? 'inglés' : 'hebreo'}.`;
     const raw = await callAI('Eres experto en neurociencia y psicología profunda. Responde concisamente.', [{ role: 'user', content: prompt }]);
     c.innerHTML = `<div class="insight-box"><p>Conexión entre patrones</p><span>${raw}</span></div>`;
@@ -571,10 +571,10 @@ async function runRelationAnalysis() {
   if (!otherUserId) return;
 
   // Get own patterns
-  const myPats = patterns.map(p => `${p.name}: ${p.desc} (${p.framework})`).join('; ');
+  const myPats = patterns.map(p => `${p.name}: ${p.description} (${p.framework})`).join('; ');
   // Get other person's patterns (encrypted from their perspective, only IA sees both)
   const { data: otherPats } = await sb.from('patterns').select('name,desc,framework').eq('user_id', otherUserId);
-  const otherPatsStr = (otherPats || []).map(p => `${p.name}: ${p.desc} (${p.framework})`).join('; ');
+  const otherPatsStr = (otherPats || []).map(p => `${p.name}: ${p.description} (${p.framework})`).join('; ');
 
   const prompt = `Persona A patrones: ${myPats || 'sin patrones aún'}. Persona B patrones: ${otherPatsStr || 'sin patrones aún'}. Analiza las dinámicas entre estos dos perfiles.`;
 
@@ -767,7 +767,7 @@ function addMsgUI(role, text, tool) {
   lbl.textContent = role === 'u' ? (userProfile?.name || L[lang].you) : L[lang].ai;
   const b = document.createElement('div'); b.className = 'mbub';
   b.innerHTML = text.replace(/\n/g, '<br>');
-  if (tool) { const td = document.createElement('div'); td.className = 'mtool'; td.innerHTML = `<div class="mtool-n">${tool.name}</div><div class="mtool-d">${tool.desc}</div>`; b.appendChild(td); }
+  if (tool) { const td = document.createElement('div'); td.className = 'mtool'; td.innerHTML = `<div class="mtool-n">${tool.name}</div><div class="mtool-d">${tool.description}</div>`; b.appendChild(td); }
   d.appendChild(lbl); d.appendChild(b); c.appendChild(d);
   c.scrollTop = c.scrollHeight;
 }
